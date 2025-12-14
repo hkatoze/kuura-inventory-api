@@ -71,8 +71,7 @@ module.exports = (app) => {
         serviceId,
         uniteFonctionnelleId,
         localId,
-        companyAbbrev,
-        code, // optional explicit code
+        code,
       } = req.body;
 
       // required checks
@@ -122,7 +121,7 @@ module.exports = (app) => {
           paranoid: false,
         });
         finalCode = generateMaterielCode({
-          companyAbbrev: companyAbbrev || process.env.COMPANY_ABBREV || "CLO",
+          companyAbbrev:  "CLO",
           service,
           unite,
           designation,
@@ -176,8 +175,7 @@ module.exports = (app) => {
     try {
       const { localId, serviceId, categorieId, marqueId, energieId, search } =
         req.query;
-      const page = parseInt(req.query.page || "1");
-      const pageSize = parseInt(req.query.pageSize || "20");
+ 
 
       const where = { isDeleted: false };
 
@@ -200,20 +198,46 @@ module.exports = (app) => {
           { model: MaterielMarque, as: "marque" },
           { model: MaterielEnergie, as: "energie" },
           { model: Service, as: "service" },
-          { model: UniteFonctionnelle, as: "uniteFonctionnelle" },
-          { model: Local, as: "local" },
+          {
+            model: UniteFonctionnelle,
+            as: "uniteFonctionnelle",
+            include: [{ model: Service, as: "service" }],
+          },
+          {
+            model: Local,
+            as: "local",
+            include: [
+              {
+                model: Service,
+                as: "service",
+                attributes: ["id", "name", "description"],
+              },
+
+              {
+                model: UniteFonctionnelle,
+                as: "uniteFonctionnelle",
+                include: [
+                  {
+                    model: Service,
+                    as: "service",
+                    attributes: ["id", "name", "description"],
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
         ],
-        order: [["designation", "ASC"]],
-        offset: (page - 1) * pageSize,
-        limit: pageSize,
+        order: [["createdAt", "DESC"]],
       });
 
       res
         .status(200)
         .json({
           success: true,
+          message: "Matériels reccupérés.",
           data: rows,
-          meta: { total: count, page, pageSize },
+       
         });
     } catch (error) {
       console.error("GET /materiels", error);
@@ -246,7 +270,7 @@ module.exports = (app) => {
         return res
           .status(404)
           .json({ success: false, message: "Matériel non trouvé." });
-      res.status(200).json({ success: true, data: mat });
+      res.status(200).json({ success: true,message: "Matériel", data: mat });
     } catch (error) {
       console.error("GET /materiels/:id", error);
       res

@@ -2,6 +2,8 @@ const path = require("path");
 const fs = require("fs");
 const { Sequelize, DataTypes } = require("sequelize");
 require("dotenv").config();
+const seedMaterielDefaults = require("./defaultMaterialsSeed");
+
 
 // Configure Sequelize
 const sequelize = new Sequelize(
@@ -35,10 +37,9 @@ const models = {};
 const modelsDir = path.join(__dirname, "models");
 
 fs.readdirSync(modelsDir)
-  .filter((file) => file.indexOf(".") !== 0 && file.slice(-3) === ".js")
+  .filter((file) => file.endsWith(".js"))
   .forEach((file) => {
-    const modelPath = path.join(modelsDir, file);
-    const modelImporter = require(modelPath);
+    const modelImporter = require(path.join(modelsDir, file));
     const model = modelImporter(sequelize, DataTypes);
     models[model.name] = model;
   });
@@ -64,15 +65,16 @@ const initDb = async (opts = {}) => {
     await sequelize.authenticate();
     console.log("✅ Database connection OK");
 
-    if (sync) {
-      console.log("🔁 Synchronizing models with database...");
-      await sequelize.sync({ alter, force });
-      console.log("✅ Models synchronized");
+ if (sync) {
+   console.log("🔁 Synchronizing models with database...");
+   await sequelize.sync({ alter, force });
+   console.log("✅ Models synchronized");
 
-    } else {
-      console.log("ℹ️ sync skipped (use migrations in production)");
-    }
-     
+   // 🌱 SEED — modèles prêts ici
+   await seedMaterielDefaults(models);
+ } else {
+   console.log("ℹ️ sync skipped (use migrations in production)");
+ }
   } catch (err) {
     console.error("❌ Unable to initialize DB:", err);
     throw err;

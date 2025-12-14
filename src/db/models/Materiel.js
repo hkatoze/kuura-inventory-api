@@ -21,10 +21,10 @@ module.exports = (sequelize, DataTypes) => {
       etat: {
         type: DataTypes.ENUM(
           "fonctionnel",
-          "non_fonctionnel",
-          "a_declasser",
-          "a_redeployer",
-          "a_reparer",
+          "nonFonctionnel",
+          "aDeclasser",
+          "aRedeployer",
+          "aReparer",
           "ras"
         ),
         allowNull: false,

@@ -26,6 +26,11 @@ require("./src/routes/localEndpoints")(app);
 require("./src/routes/materielEndpoints")(app);
 require("./src/routes/serviceEndpoints")(app);
 require("./src/routes/ufEndpoints")(app);
+require("./src/routes/materielCategorieEndpoints")(app);
+require("./src/routes/materielEnergieEndpoints")(app);
+require("./src/routes/materielMarqueEndpoints")(app);
+require("./src/routes/materielMetaEndpoints")(app);
+require("./src/routes/dashboardEndpoints")(app);
 
 
 //404 error managment

@@ -41,27 +41,33 @@ module.exports = (app) => {
     }
   });
 
-  app.get("/api/v1/ufs", async (req, res) => {
-    try {
-      const serviceId = req.query.serviceId;
-      const where = {};
-      if (serviceId) where.serviceId = serviceId;
-      const ufs = await UniteFonctionnelle.findAll({
-        where,
-        order: [["name", "ASC"]],
-      });
-      res.status(200).json({ success: true, data: ufs });
-    } catch (error) {
-      console.error("GET /ufs", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erreur serveur.",
-          data: error.message,
-        });
-    }
-  });
+ app.get("/api/v1/ufs", async (req, res) => {
+   try {
+  
+     const ufs = await UniteFonctionnelle.findAll({
+       include: [
+         {
+           model: Service,
+           as: "service",
+           attributes: ["id", "name", "description"],
+         },
+       ],
+       order: [["createdAt", "DESC"]],
+     });
+
+     res
+       .status(200)
+       .json({ success: true, message: "Liste des unités.", data: ufs });
+   } catch (error) {
+     console.error("GET /ufs", error);
+     res.status(500).json({
+       success: false,
+       message: "Erreur serveur.",
+       data: error.message,
+     });
+   }
+ });
+
 
   app.get("/api/v1/ufs/:id", async (req, res) => {
     try {
@@ -127,4 +133,49 @@ module.exports = (app) => {
         });
     }
   });
+
+
+    app.delete("/api/v1/ufs/delete-multiple", auth, async (req, res) => {
+      try {
+        const { ids } = req.body;
+     
+  
+        if (!Array.isArray(ids) || ids.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Le tableau 'ids' est requis et ne peut pas être vide.",
+          });
+        }
+  
+        // Vérifier les unites existants
+        const existing = await UniteFonctionnelle.findAll({
+          where: { id: ids },
+        });
+  
+        const existingIds = existing.map((s) => s.id);
+        const notFoundIds = ids.filter((id) => !existingIds.includes(id));
+  
+        // Supprimer seulement ce qui existe
+        const deletedCount = await UniteFonctionnelle.destroy({
+          where: { id: existingIds },
+        });
+  
+        return res.status(200).json({
+          success: true,
+          message: `${deletedCount} unite(s) supprimé(s) avec succès.`,
+          details: {
+            deletedIds: existingIds,
+            ignoredIds: notFoundIds,
+          },
+        });
+      } catch (error) {
+        console.error("Erreur DELETE /ufs/delete-multiple :", error);
+        return res.status(500).json({
+          success: false,
+          message:
+            "Erreur serveur lors de la suppression multiple des unites.",
+          data: error.message,
+        });
+      }
+    });
 };

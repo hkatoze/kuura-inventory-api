@@ -9,12 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     { timestamps: true, tableName: "materiel_energies" }
   );
 
-  MaterielEnergie.associate = (models) => {
-    MaterielEnergie.hasMany(models.Materiel, {
-      foreignKey: "energieId",
-      as: "materiels",
-    });
-  };
+  
 
   return MaterielEnergie;
 };

@@ -56,10 +56,40 @@ module.exports = (app) => {
   app.get("/api/v1/locals", async (req, res) => {
     try {
       const serviceId = req.query.serviceId;
+      const uniteFonctionnelleId = req.query.uniteFonctionnelleId;
       const where = {};
       if (serviceId) where.serviceId = serviceId;
-      const locals = await Local.findAll({ where, order: [["name", "ASC"]] });
-      res.status(200).json({ success: true, data: locals });
+       if (uniteFonctionnelleId) where.uniteFonctionnelleId = uniteFonctionnelleId;
+
+
+      const locals = await Local.findAll({
+        where,
+
+        include: [
+          {
+            model: Service,
+            as: "service",
+            attributes: ["id", "name", "description"],
+          },
+
+          {
+            model: UniteFonctionnelle,
+            as: "uniteFonctionnelle",
+            include: [
+              {
+                model: Service,
+                as: "service",
+                attributes: ["id", "name", "description"],
+                required: true,
+              },
+            ],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+
+
+      res.status(200).json({ success: true, message: "Locaux reccupérés.", data: locals });
     } catch (error) {
       console.error("GET /locals", error);
       res
@@ -153,4 +183,48 @@ module.exports = (app) => {
         });
     }
   });
+
+      app.delete("/api/v1/locals/delete-multiple", auth, async (req, res) => {
+        try {
+          const { ids } = req.body;
+       
+    
+          if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: "Le tableau 'ids' est requis et ne peut pas être vide.",
+            });
+          }
+    
+          // Vérifier les locaux existants
+          const existing = await Local.findAll({
+            where: { id: ids },
+          });
+    
+          const existingIds = existing.map((s) => s.id);
+          const notFoundIds = ids.filter((id) => !existingIds.includes(id));
+    
+          // Supprimer seulement ce qui existe
+          const deletedCount = await Local.destroy({
+            where: { id: existingIds },
+          });
+    
+          return res.status(200).json({
+            success: true,
+            message: `${deletedCount} local(s) supprimé(s) avec succès.`,
+            details: {
+              deletedIds: existingIds,
+              ignoredIds: notFoundIds,
+            },
+          });
+        } catch (error) {
+          console.error("Erreur DELETE /locals/delete-multiple :", error);
+          return res.status(500).json({
+            success: false,
+            message:
+              "Erreur serveur lors de la suppression multiple des locaux.",
+            data: error.message,
+          });
+        }
+      });
 };

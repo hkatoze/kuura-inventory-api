@@ -37,7 +37,8 @@ module.exports = (app) => {
       const page = parseInt(req.query.page || "1");
       const pageSize = parseInt(req.query.pageSize || "100");
       const services = await Service.findAll({
-        order: [["name", "ASC"]],
+     order: [["createdAt", "DESC"]],
+
         offset: (page - 1) * pageSize,
         limit: pageSize,
       });
@@ -84,7 +85,7 @@ module.exports = (app) => {
       if (!service)
         return res
           .status(404)
-          .json({ success: false, message: "Service non trouvé." });
+          .json({ success: false, message: "Service non trouvée." });
       await service.update(req.body);
       res
         .status(200)
@@ -121,6 +122,50 @@ module.exports = (app) => {
           message: "Erreur serveur.",
           data: error.message,
         });
+    }
+  });
+
+  app.delete("/api/v1/services/delete-multiple", auth, async (req, res) => {
+    try {
+      const { ids } = req.body;
+   
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Le tableau 'ids' est requis et ne peut pas être vide.",
+        });
+      }
+
+      // Vérifier les services existants
+      const existing = await Service.findAll({
+        where: { id: ids },
+      });
+
+      const existingIds = existing.map((s) => s.id);
+      const notFoundIds = ids.filter((id) => !existingIds.includes(id));
+
+      // Supprimer seulement ce qui existe
+      const deletedCount = await Service.destroy({
+        where: { id: existingIds },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `${deletedCount} service(s) supprimé(s) avec succès.`,
+        details: {
+          deletedIds: existingIds,
+          ignoredIds: notFoundIds,
+        },
+      });
+    } catch (error) {
+      console.error("Erreur DELETE /services/delete-multiple :", error);
+      return res.status(500).json({
+        success: false,
+        message:
+          "Erreur serveur lors de la suppression multiple des services.",
+        data: error.message,
+      });
     }
   });
 };
