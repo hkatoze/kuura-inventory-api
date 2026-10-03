@@ -1,4 +1,3 @@
-const { ValidationError, UniqueConstraintError } = require("sequelize");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -6,60 +5,10 @@ require("dotenv").config();
 const db = require("../db/sequelize");
 const { Admin } = db.models;
 
+// Pas de route d'inscription publique : les comptes administrateurs sont créés
+// côté serveur (script ou base de données), jamais via l'API ouverte.
+
 module.exports = (app) => {
-  /**
-   * =====================================================
-   *  POST /api/v1/adminSignup
-   * =====================================================
-   *  - Crée un nouveau compte administrateur
-   */
-  app.post("/api/v1/adminSignup", async (req, res) => {
-    const { emailAddress, nameAndSurname, password } = req.body;
-
-    if (!emailAddress || !nameAndSurname || !password) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Les champs 'emailAddress', 'nameAndSurname' et 'password' sont requis.",
-      });
-    }
-
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const admin = await Admin.create({
-        emailAddress,
-        nameAndSurname,
-        password: hashedPassword,
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: "Création de compte administrateur réussie.",
-        data: admin,
-      });
-    } catch (error) {
-      console.error("Erreur adminSignup :", error);
-
-      if (
-        error instanceof ValidationError ||
-        error instanceof UniqueConstraintError
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message:
-          "L'administrateur n'a pas pu être créé. Réessayer dans quelques instants.",
-        data: error.message,
-      });
-    }
-  });
-
   /**
    * =====================================================
    *  POST /api/v1/adminLogin
@@ -106,7 +55,12 @@ module.exports = (app) => {
       return res.status(200).json({
         success: true,
         message: "Connexion administrateur réussie.",
-        data: admin,
+        // Jamais le hash du mot de passe dans la réponse
+        data: {
+          id: admin.id,
+          emailAddress: admin.emailAddress,
+          nameAndSurname: admin.nameAndSurname,
+        },
         token,
       });
     } catch (error) {
